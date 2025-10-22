@@ -1,0 +1,259 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  SERVICE_PROVIDER
+  ADMIN
+  SUPERADMIN
+}
+
+enum DestinationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  role          Role      @default(USER)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts Account[]
+  sessions Session[]
+
+  // Tourism-specific fields
+  bio          String?
+  location     String?
+  phone        String?
+  isVerified   Boolean @default(false)
+  profileImage String?
+
+  // Service provider specific fields
+  businessName        String?
+  businessType        String?
+  businessLicense     String?
+  businessAddress     String?
+  businessPhone       String?
+  businessEmail       String?
+  businessWebsite     String?
+  businessDescription String?
+  isBusinessVerified  Boolean @default(false)
+
+  // Relations
+  destinations         Destination[]
+  comments             Comment[]
+  likes                Like[]
+  views                View[]
+  assignedCategories   ServiceProviderCategory[]
+  approvedDestinations Destination[]             @relation("DestinationApprover")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  email     String
+  token     String   @unique
+  expires   DateTime
+  createdAt DateTime @default(now())
+
+  @@index([email])
+  @@index([token])
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  subcategories             Subcategory[]
+  destinations              Destination[]
+  formFields                FormField[]
+  serviceProviderCategories ServiceProviderCategory[]
+}
+
+model FormField {
+  id          String   @id @default(cuid())
+  name        String
+  label       String
+  type        String // 'text', 'textarea', 'number', 'date', 'time', 'dateTime', 'location', 'select', 'checkbox', 'radio'
+  required    Boolean  @default(false)
+  placeholder String?
+  options     String? // JSON string for select/radio options
+  order       Int      @default(0)
+  width       String   @default("full") // 'half' or 'full'
+  categoryId  String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+}
+
+model Subcategory {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  categoryId  String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  category                  Category                  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  destinations              Destination[]
+  serviceProviderCategories ServiceProviderCategory[]
+
+  @@unique([name, categoryId])
+}
+
+model Destination {
+  id               String            @id @default(cuid())
+  name             String
+  description      String
+  location         String
+  latitude         Float
+  longitude        Float
+  pickupLocation   String
+  price            Float
+  basePrice        Float? // Service provider's original price
+  markupPercentage Float? // Admin markup percentage
+  finalPrice       Float? // Final price after markup
+  rating           Float             @default(0)
+  imageUrl         String?
+  customFields     Json? // Store dynamic form field data as JSON
+  viewCount        Int               @default(0)
+  status           DestinationStatus @default(PENDING)
+  categoryId       String
+  subcategoryId    String?
+  createdById      String
+  approvedById     String?
+  approvedAt       DateTime?
+  rejectionReason  String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  category    Category     @relation(fields: [categoryId], references: [id])
+  subcategory Subcategory? @relation(fields: [subcategoryId], references: [id])
+  createdBy   User         @relation(fields: [createdById], references: [id])
+  approvedBy  User?        @relation("DestinationApprover", fields: [approvedById], references: [id])
+  comments    Comment[]
+  likes       Like[]
+  views       View[]
+
+  @@index([categoryId])
+  @@index([subcategoryId])
+  @@index([createdById])
+  @@index([status])
+}
+
+model Comment {
+  id            String   @id @default(cuid())
+  content       String
+  rating        Int?     @db.SmallInt
+  destinationId String
+  userId        String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  destination Destination @relation(fields: [destinationId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([destinationId])
+  @@index([userId])
+}
+
+model Like {
+  id            String   @id @default(cuid())
+  destinationId String
+  userId        String
+  createdAt     DateTime @default(now())
+
+  destination Destination @relation(fields: [destinationId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([destinationId, userId])
+  @@index([destinationId])
+  @@index([userId])
+}
+
+model View {
+  id            String   @id @default(cuid())
+  destinationId String
+  userId        String?
+  ipAddress     String?
+  userAgent     String?
+  createdAt     DateTime @default(now())
+
+  destination Destination @relation(fields: [destinationId], references: [id], onDelete: Cascade)
+  user        User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([destinationId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model ServiceProviderCategory {
+  id                String   @id @default(cuid())
+  serviceProviderId String
+  categoryId        String
+  subcategoryId     String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  serviceProvider User         @relation(fields: [serviceProviderId], references: [id], onDelete: Cascade)
+  category        Category     @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  subcategory     Subcategory? @relation(fields: [subcategoryId], references: [id], onDelete: Cascade)
+
+  @@unique([serviceProviderId, categoryId, subcategoryId])
+  @@index([serviceProviderId])
+  @@index([categoryId])
+}

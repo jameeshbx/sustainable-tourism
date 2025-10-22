@@ -1,0 +1,7 @@
+---
+alwaysApply: true
+---
+
+use yarn, not npm
+always create reusable components
+check type errors

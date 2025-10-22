@@ -84,10 +84,10 @@ export default async function DestinationDetailPage({
 
   // Check if user can edit this destination (only for logged in users)
   const canEdit =
-    session?.user &&
-    (session.user.role === "ADMIN" ||
+    session?.user && // User must be logged in
+    (session.user.role === "ADMIN" || // Admin can edit any destination
       (session.user.role === "SERVICE_PROVIDER" &&
-        destination.createdById === session.user.id));
+        destination.createdById === session.user.id)); // Service provider can only edit their own destinations
 
   // Check if user can comment (logged in users who are not the creator)
   const canComment =
@@ -243,7 +243,13 @@ export default async function DestinationDetailPage({
                   </CardHeader>
                   <CardContent className="space-y-2">
                     <Link
-                      href={`/destinations/${destination.id}/edit`}
+                      href={
+                        session?.user?.role === "ADMIN"
+                          ? `/admin/destinations/${destination.id}/edit`
+                          : session?.user?.role === "SERVICE_PROVIDER"
+                          ? `/sp/destinations/${destination.id}/edit`
+                          : `/destinations/${destination.id}/edit`
+                      }
                       className="block"
                     >
                       <Button className="w-full">Edit Destination</Button>

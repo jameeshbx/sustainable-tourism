@@ -41,7 +41,13 @@ export default async function EditDestinationPage({
   const destination = await prisma.destination.findUnique({
     where: { id },
     include: {
-      category: true,
+      category: {
+        include: {
+          formFields: {
+            orderBy: { order: "asc" },
+          },
+        },
+      },
       subcategory: true,
       createdBy: {
         select: {
@@ -103,6 +109,11 @@ export default async function EditDestinationPage({
                   "use server";
 
                   try {
+                    const formEntries = Object.fromEntries(
+                      formData.entries()
+                    ) as Record<string, string>;
+
+                    // Extract basic fields
                     const {
                       name,
                       description,
@@ -117,10 +128,43 @@ export default async function EditDestinationPage({
                       categoryId,
                       subcategoryId,
                       status,
-                    } = Object.fromEntries(formData.entries()) as Record<
+                    } = formEntries;
+
+                    // Extract custom fields (all fields that are not basic fields)
+                    const basicFields = [
+                      "name",
+                      "description",
+                      "location",
+                      "latitude",
+                      "longitude",
+                      "pickupLocation",
+                      "basePrice",
+                      "markupPercentage",
+                      "finalPrice",
+                      "imageUrl",
+                      "categoryId",
+                      "subcategoryId",
+                      "status",
+                    ];
+
+                    const customFields: Record<
                       string,
-                      string
-                    >;
+                      string | number | boolean
+                    > = {};
+                    Object.entries(formEntries).forEach(([key, value]) => {
+                      if (!basicFields.includes(key) && value !== "") {
+                        // Convert string values to appropriate types
+                        if (value === "true") {
+                          customFields[key] = true;
+                        } else if (value === "false") {
+                          customFields[key] = false;
+                        } else if (!isNaN(Number(value)) && value !== "") {
+                          customFields[key] = Number(value);
+                        } else {
+                          customFields[key] = value;
+                        }
+                      }
+                    });
 
                     console.log("Form data received:", {
                       name,
@@ -211,6 +255,13 @@ export default async function EditDestinationPage({
                           subcategoryId && subcategoryId !== "none"
                             ? subcategoryId
                             : null,
+                        customFields:
+                          Object.keys(customFields).length > 0
+                            ? customFields
+                            : (existingDestination.customFields as Record<
+                                string,
+                                string | number | boolean
+                              >) || {},
                         status: status as "PENDING" | "APPROVED" | "REJECTED",
                         approvedById:
                           status === "APPROVED"
@@ -286,6 +337,91 @@ export default async function EditDestinationPage({
                     />
                   </div>
                 </div>
+
+                {/* Custom Fields */}
+                {destination.category.formFields &&
+                  destination.category.formFields.length > 0 && (
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-medium">
+                        {destination.category.name} Information
+                      </h3>
+
+                      {destination.category.formFields.map((field) => {
+                        const fieldValue =
+                          (
+                            destination.customFields as Record<
+                              string,
+                              string | number | boolean
+                            >
+                          )?.[field.name] || "";
+
+                        return (
+                          <div
+                            key={field.id}
+                            className={
+                              field.width === "half"
+                                ? "grid grid-cols-1 md:grid-cols-2 gap-4"
+                                : ""
+                            }
+                          >
+                            <div>
+                              <Label htmlFor={field.name}>{field.label}</Label>
+                              {field.type === "textarea" ? (
+                                <Textarea
+                                  id={field.name}
+                                  name={field.name}
+                                  defaultValue={String(fieldValue)}
+                                  placeholder={field.placeholder || ""}
+                                  rows={4}
+                                  required={field.required}
+                                />
+                              ) : field.type === "number" ? (
+                                <Input
+                                  id={field.name}
+                                  name={field.name}
+                                  type="number"
+                                  step="any"
+                                  defaultValue={String(fieldValue)}
+                                  placeholder={field.placeholder || ""}
+                                  required={field.required}
+                                />
+                              ) : field.type === "dateTime" ? (
+                                <Input
+                                  id={field.name}
+                                  name={field.name}
+                                  type="datetime-local"
+                                  defaultValue={
+                                    fieldValue
+                                      ? new Date(fieldValue as string)
+                                          .toISOString()
+                                          .slice(0, 16)
+                                      : ""
+                                  }
+                                  placeholder={field.placeholder || ""}
+                                  required={field.required}
+                                />
+                              ) : (
+                                <Input
+                                  id={field.name}
+                                  name={field.name}
+                                  type={
+                                    field.type === "email"
+                                      ? "email"
+                                      : field.type === "url"
+                                      ? "url"
+                                      : "text"
+                                  }
+                                  defaultValue={String(fieldValue)}
+                                  placeholder={field.placeholder || ""}
+                                  required={field.required}
+                                />
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
 
                 {/* Pricing Information */}
                 <div className="space-y-4">

@@ -43,9 +43,9 @@ export default function SignInPage() {
           session?.user?.role === "ADMIN" ||
           session?.user?.role === "SUPERADMIN"
         ) {
-          router.push("/admin");
+          router.push("/admin/dashboard");
         } else if (session?.user?.role === "SERVICE_PROVIDER") {
-          router.push("/provider");
+          router.push("/sp/dashboard");
         } else {
           router.push("/");
         }

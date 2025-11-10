@@ -23,6 +23,12 @@ enum DestinationStatus {
   REJECTED
 }
 
+enum CategoryType {
+  DESTINATION
+  ACTIVITY
+  BUYLOCAL
+}
+
 model Account {
   id                String  @id @default(cuid())
   userId            String
@@ -111,11 +117,12 @@ model PasswordResetToken {
 }
 
 model Category {
-  id          String   @id @default(cuid())
-  name        String   @unique
+  id          String       @id @default(cuid())
+  name        String       @unique
   description String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  type        CategoryType
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 
   subcategories             Subcategory[]
   destinations              Destination[]

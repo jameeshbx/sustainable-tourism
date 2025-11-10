@@ -9,6 +9,7 @@ async function main() {
     {
       name: 'Eco Tours',
       description: 'Environmentally conscious tours focusing on nature and sustainability',
+      type: 'ACTIVITY' as const,
       subcategories: [
         'Wildlife Watching',
         'Bird Watching',
@@ -21,6 +22,7 @@ async function main() {
     {
       name: 'Adventures',
       description: 'Thrilling outdoor activities and adventure sports',
+      type: 'ACTIVITY' as const,
       subcategories: [
         'Rock Climbing',
         'White Water Rafting',
@@ -34,6 +36,7 @@ async function main() {
     {
       name: 'Eco Stays',
       description: 'Sustainable accommodation options',
+      type: 'DESTINATION' as const,
       subcategories: [
         'Eco Lodges',
         'Tree Houses',
@@ -46,6 +49,7 @@ async function main() {
     {
       name: 'Heritage Tours',
       description: 'Cultural and historical site visits',
+      type: 'DESTINATION' as const,
       subcategories: [
         'Historical Monuments',
         'Archaeological Sites',
@@ -58,6 +62,7 @@ async function main() {
     {
       name: 'Cultural Tours',
       description: 'Immersive cultural experiences',
+      type: 'DESTINATION' as const,
       subcategories: [
         'Local Festivals',
         'Traditional Crafts',
@@ -70,6 +75,7 @@ async function main() {
     {
       name: 'Wellness Tours',
       description: 'Health and wellness focused experiences',
+      type: 'ACTIVITY' as const,
       subcategories: [
         'Yoga Retreats',
         'Meditation Centers',
@@ -82,6 +88,7 @@ async function main() {
     {
       name: 'Community Exploration',
       description: 'Community-based tourism experiences',
+      type: 'DESTINATION' as const,
       subcategories: [
         'Village Tours',
         'Local Community Projects',
@@ -94,6 +101,7 @@ async function main() {
     {
       name: 'Sustainable Tour Itineraries',
       description: 'Comprehensive sustainable travel packages',
+      type: 'ACTIVITY' as const,
       subcategories: [
         'Multi-day Eco Tours',
         'Carbon Neutral Travel',
@@ -106,6 +114,7 @@ async function main() {
     {
       name: 'Buy from Local',
       description: 'Supporting local businesses and artisans',
+      type: 'BUYLOCAL' as const,
       subcategories: [
         'Local Markets',
         'Artisan Workshops',
@@ -118,6 +127,7 @@ async function main() {
     {
       name: 'Learning Trips',
       description: 'Educational and skill-building experiences',
+      type: 'ACTIVITY' as const,
       subcategories: [
         'Language Learning',
         'Cooking Classes',
@@ -132,10 +142,13 @@ async function main() {
   for (const categoryData of categories) {
     const category = await prisma.category.upsert({
       where: { name: categoryData.name },
-      update: {},
+      update: {
+        type: categoryData.type,
+      },
       create: {
         name: categoryData.name,
         description: categoryData.description,
+        type: categoryData.type,
       },
     })
 

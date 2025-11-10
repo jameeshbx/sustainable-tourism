@@ -231,6 +231,47 @@ function renderPreviewField(field: FormField, value: unknown) {
         />
       );
 
+    case "price": {
+      // Parse price options
+      let currencySymbol = "$";
+      let pricingModel = "per_person";
+      let groupSize = 1;
+      
+      if (field.options) {
+        try {
+          const parsed = JSON.parse(field.options);
+          currencySymbol = parsed.currencySymbol || "$";
+          pricingModel = parsed.pricingModel || "per_person";
+          groupSize = parsed.groupSize || 1;
+        } catch {
+          // Use defaults
+        }
+      }
+
+      const pricingLabel =
+        pricingModel === "per_person"
+          ? "per person"
+          : `per group of ${groupSize} people`;
+
+      return (
+        <div className="space-y-1">
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 text-sm">
+              {currencySymbol}
+            </span>
+            <input
+              type="number"
+              className={`${baseClasses} pl-8`}
+              placeholder={field.placeholder || "0.00"}
+              value={String(value || "")}
+              disabled
+            />
+          </div>
+          <p className="text-xs text-gray-500">{pricingLabel}</p>
+        </div>
+      );
+    }
+
     case "date":
       return (
         <input
@@ -278,6 +319,78 @@ function renderPreviewField(field: FormField, value: unknown) {
           </div>
         </div>
       );
+
+    case "route": {
+      // Parse route options
+      let mode: "single" | "multiple" = "single";
+      let showRoute = false;
+      let pointLabels: string[] = [];
+
+      if (field.options) {
+        try {
+          const parsed = JSON.parse(field.options);
+          mode = parsed.mode || "single";
+          showRoute = parsed.showRoute || false;
+          pointLabels = parsed.pointLabels || [];
+        } catch {
+          // Use defaults
+        }
+      }
+
+      // Parse points from value
+      let points: Array<{ label: string; address: string }> = [];
+      if (value && typeof value === "string") {
+        try {
+          const parsed = JSON.parse(value);
+          points = Array.isArray(parsed) ? parsed : [];
+        } catch {
+          // Invalid JSON
+        }
+      }
+
+      return (
+        <div className="space-y-2">
+          <div className="p-3 border border-gray-300 rounded-md bg-gray-50">
+            {points.length === 0 ? (
+              <p className="text-sm text-gray-500">
+                {mode === "single"
+                  ? "No location selected"
+                  : "No points added yet"}
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {points.map((point, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-start space-x-2 text-sm"
+                  >
+                    <span className="text-blue-600">📍</span>
+                    <div className="flex-1">
+                      <p className="font-medium text-gray-900">
+                        {point.label || `Point ${idx + 1}`}
+                      </p>
+                      <p className="text-gray-600 text-xs">{point.address}</p>
+                    </div>
+                  </div>
+                ))}
+                {showRoute && points.length > 1 && (
+                  <div className="mt-2 pt-2 border-t border-gray-200">
+                    <p className="text-xs text-gray-500">
+                      Route line will be displayed
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          <p className="text-xs text-gray-500">
+            {mode === "single"
+              ? "Single point mode"
+              : `Multiple points mode (${pointLabels.length || "custom"} labels)`}
+          </p>
+        </div>
+      );
+    }
 
     case "select":
       const selectOptions = field.options

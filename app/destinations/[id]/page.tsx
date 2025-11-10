@@ -14,6 +14,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { CommentSection } from "@/components/comment-section";
 import { MapComponent } from "@/components/map-component";
+import { RouteMapComponent } from "@/components/route-map-component";
 import { ViewTracker } from "@/components/view-tracker";
 
 export default async function DestinationDetailPage({
@@ -27,7 +28,15 @@ export default async function DestinationDetailPage({
   const destination = await prisma.destination.findUnique({
     where: { id },
     include: {
-      category: true,
+      category: {
+        include: {
+          formFields: {
+            orderBy: {
+              order: "asc",
+            },
+          },
+        },
+      },
       subcategory: true,
       createdBy: {
         select: {
@@ -305,17 +314,118 @@ export default async function DestinationDetailPage({
               </Card>
 
               {/* Map Section */}
-              <div className="px-0 pb-4">
-                <div className="rounded-lg overflow-hidden border border-gray-200">
-                  <MapComponent
-                    latitude={destination.latitude}
-                    longitude={destination.longitude}
-                    zoom={14}
-                    height="300px"
-                    markerColor="#ef4444"
-                  />
-                </div>
-              </div>
+              {(() => {
+                // Check for route fields in customFields
+                const customFields = destination.customFields as
+                  | Record<string, unknown>
+                  | null;
+                const routeFields = destination.category.formFields.filter(
+                  (f) => f.type === "route"
+                );
+
+                // Find route data in customFields
+                let routeData: {
+                  points: Array<{
+                    id: string;
+                    label: string;
+                    address: string;
+                    coordinates: [number, number];
+                  }>;
+                  showRoute: boolean;
+                } | null = null;
+
+                for (const routeField of routeFields) {
+                  if (customFields && customFields[routeField.name]) {
+                    try {
+                      const points = JSON.parse(
+                        customFields[routeField.name] as string
+                      );
+                      if (Array.isArray(points) && points.length > 0) {
+                        const routeOptions = routeField.options
+                          ? JSON.parse(routeField.options)
+                          : {};
+                        routeData = {
+                          points,
+                          showRoute: routeOptions.showRoute || false,
+                        };
+                        break; // Use first route field found
+                      }
+                    } catch {
+                      // Invalid JSON, skip
+                    }
+                  }
+                }
+
+                // If we have route data, show RouteMapComponent, otherwise show regular map
+                if (routeData && routeData.points.length > 0) {
+                  return (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Route Map</CardTitle>
+                        <CardDescription>
+                          {routeData.points.length === 1
+                            ? "Location"
+                            : `Route with ${routeData.points.length} points`}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="p-0">
+                        <div className="rounded-lg overflow-hidden border border-gray-200">
+                          <RouteMapComponent
+                            points={routeData.points}
+                            showRoute={routeData.showRoute}
+                            zoom={14}
+                            height="400px"
+                            markerColor="#ef4444"
+                          />
+                        </div>
+                        {/* Route Points List */}
+                        {routeData.points.length > 1 && (
+                          <div className="p-4 space-y-2 border-t">
+                            <h4 className="text-sm font-medium text-gray-900">
+                              Route Points
+                            </h4>
+                            <div className="space-y-1">
+                              {routeData.points.map((point, idx) => (
+                                <div
+                                  key={point.id || idx}
+                                  className="flex items-start space-x-2 text-sm"
+                                >
+                                  <span className="text-blue-600 mt-0.5">
+                                    {idx + 1}.
+                                  </span>
+                                  <div className="flex-1">
+                                    <p className="font-medium text-gray-900">
+                                      {point.label}
+                                    </p>
+                                    <p className="text-gray-600 text-xs">
+                                      {point.address}
+                                    </p>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                }
+
+                // Default single point map
+                return (
+                  <div className="px-0 pb-4">
+                    <div className="rounded-lg overflow-hidden border border-gray-200">
+                      <MapComponent
+                        latitude={destination.latitude}
+                        longitude={destination.longitude}
+                        zoom={14}
+                        height="300px"
+                        markerColor="#ef4444"
+                      />
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,6 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ImageField } from "@/components/image-field";
 import { LocationField } from "@/components/location-field";
+import { RouteField } from "@/components/route-field";
 
 interface FormField {
   id: string;
@@ -42,11 +44,14 @@ export function DynamicForm({
 }: DynamicFormProps) {
   const sortedFields = [...fields].sort((a, b) => a.order - b.order);
 
-  const handleChange = (name: string, value: string) => {
-    if (onChange) {
-      onChange(name, value);
-    }
-  };
+  const handleChange = useCallback(
+    (name: string, value: string) => {
+      if (onChange) {
+        onChange(name, value);
+      }
+    },
+    [onChange]
+  );
 
   const renderField = (field: FormField) => {
     const value = values[field.name] || "";
@@ -116,6 +121,63 @@ export function DynamicForm({
           </div>
         );
 
+      case "price": {
+        // Parse price options
+        let currencySymbol = "$";
+        let pricingModel = "per_person";
+        let groupSize = 1;
+        
+        if (field.options) {
+          try {
+            const parsed = JSON.parse(field.options);
+            currencySymbol = parsed.currencySymbol || "$";
+            pricingModel = parsed.pricingModel || "per_person";
+            groupSize = parsed.groupSize || 1;
+          } catch {
+            // Use defaults
+          }
+        }
+
+        const pricingLabel =
+          pricingModel === "per_person"
+            ? "per person"
+            : `per group of ${groupSize} people`;
+
+        return (
+          <div key={field.id}>
+            <Label htmlFor={field.name}>
+              {field.label}
+              {field.required && <span className="text-red-500 ml-1">*</span>}
+            </Label>
+            <div className="space-y-1">
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 text-sm font-medium">
+                  {currencySymbol}
+                </span>
+                <Input
+                  id={field.name}
+                  name={field.name}
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={value}
+                  onChange={(e) =>
+                    handleChange(
+                      field.name,
+                      String(parseFloat(e.target.value) || 0)
+                    )
+                  }
+                  placeholder={field.placeholder || "0.00"}
+                  className={`pl-8 ${error ? "border-red-500" : ""}`}
+                />
+              </div>
+              <p className="text-xs text-gray-500">{pricingLabel}</p>
+            </div>
+            {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
+          </div>
+        );
+      }
+
       case "date":
         return (
           <div key={field.id}>
@@ -184,6 +246,22 @@ export function DynamicForm({
               value={value}
               onChange={handleChange}
               error={error}
+            />
+          </div>
+        );
+
+      case "route":
+        return (
+          <div key={field.id}>
+            <RouteField
+              name={field.name}
+              label={field.label}
+              required={field.required}
+              placeholder={field.placeholder}
+              value={value}
+              onChange={handleChange}
+              error={error}
+              options={field.options}
             />
           </div>
         );

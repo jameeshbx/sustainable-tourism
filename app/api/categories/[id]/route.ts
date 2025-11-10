@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/lib/auth'
+import { CategoryType } from '@prisma/client'
+
+const VALID_CATEGORY_TYPES: CategoryType[] = ['DESTINATION', 'ACTIVITY', 'BUYLOCAL']
 
 export async function PUT(
   request: NextRequest,
@@ -18,16 +21,24 @@ export async function PUT(
 
     const { id } = await params
     const formData = await request.formData()
-    const { name, description } = Object.fromEntries(formData.entries())
+    const { name, description, type } = Object.fromEntries(formData.entries())
     
     // Ensure name is a string
     const nameStr = typeof name === 'string' ? name : ''
     const descriptionStr = typeof description === 'string' ? description : ''
+    const typeStr = typeof type === 'string' ? type : ''
 
     // Validate required fields
     if (!nameStr) {
       return NextResponse.json(
         { error: 'Category name is required' },
+        { status: 400 }
+      )
+    }
+
+    if (!typeStr || !VALID_CATEGORY_TYPES.includes(typeStr as CategoryType)) {
+      return NextResponse.json(
+        { error: 'Category type is required and must be DESTINATION, ACTIVITY, or BUYLOCAL' },
         { status: 400 }
       )
     }
@@ -64,11 +75,16 @@ export async function PUT(
       )
     }
 
+    // Map string to enum value - use enum object if available, otherwise cast
+    const categoryType: CategoryType = 
+      CategoryType[typeStr as keyof typeof CategoryType] || (typeStr as CategoryType)
+    
     const category = await prisma.category.update({
       where: { id },
       data: {
         name: nameStr,
         description: descriptionStr || null,
+        type: categoryType,
       },
       include: {
         subcategories: {

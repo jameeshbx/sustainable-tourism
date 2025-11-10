@@ -71,15 +71,15 @@ export default async function EditCategoryPage({
               <form
                 action={async (formData: FormData) => {
                   "use server";
+                  const { cookies } = await import("next/headers");
+                  const cookieStore = await cookies();
                   const response = await fetch(
                     `${process.env.NEXTAUTH_URL}/api/categories/${categoryId}`,
                     {
                       method: "PUT",
                       body: formData,
                       headers: {
-                        cookie: await import("next/headers").then(
-                          ({ cookies }) => cookies().toString()
-                        ),
+                        cookie: cookieStore.toString(),
                       },
                     }
                   );
@@ -102,6 +102,21 @@ export default async function EditCategoryPage({
                     placeholder="e.g., Adventure Tours"
                     required
                   />
+                </div>
+
+                <div>
+                  <Label htmlFor="type">Category Type *</Label>
+                  <select
+                    id="type"
+                    name="type"
+                    required
+                    defaultValue={category.type}
+                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <option value="DESTINATION">Destination</option>
+                    <option value="ACTIVITY">Activity</option>
+                    <option value="BUYLOCAL">Buy Local</option>
+                  </select>
                 </div>
 
                 <div>

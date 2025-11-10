@@ -68,13 +68,14 @@ export function SearchFilter({
     } else {
       setAvailableSubcategories([]);
     }
-    // Reset subcategory when category changes
-    setSelectedSubcategory("all");
-  }, [selectedCategory, categories]);
+    // Note: Subcategory reset is handled in handleCategoryChange to avoid infinite loops
+  }, [selectedCategory]); // Removed categories from dependencies to prevent infinite loops
 
   // Handle category change
   const handleCategoryChange = (value: string) => {
     setSelectedCategory(value);
+    // Reset subcategory when category changes
+    setSelectedSubcategory("all");
   };
 
   // Handle subcategory change
@@ -86,7 +87,6 @@ export function SearchFilter({
     <form
       method="GET"
       className={`space-y-4 ${className}`}
-      key={`${selectedCategory}-${selectedSubcategory}`}
     >
       <div className="grid grid-cols-1 md:grid-cols-4 gap-1">
         <div>

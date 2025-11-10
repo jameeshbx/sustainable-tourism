@@ -61,11 +61,11 @@ export function Carousel3D({
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
           <h2 className="text-4xl font-bold text-gray-900 mb-4">
-            Discover Kerala's Treasures
+            Discover Kerala&apos;s Treasures
           </h2>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
             Immerse yourself in the rich culture, traditions, and natural beauty
-            of God's Own Country
+            of God&apos;s Own Country
           </p>
         </div>
 
@@ -164,9 +164,8 @@ export function Carousel3D({
           {items.map((_, index) => (
             <button
               key={index}
-              className={`w-3 h-3 rounded-full transition-colors duration-300 ${
-                index === currentIndex ? "bg-gray-900" : "bg-gray-300"
-              }`}
+              className={`w-3 h-3 rounded-full transition-colors duration-300 ${index === currentIndex ? "bg-gray-900" : "bg-gray-300"
+                }`}
               onClick={() => setCurrentIndex(index)}
             />
           ))}

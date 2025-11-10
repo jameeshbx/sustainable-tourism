@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, useCallback, useRef, memo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useToastActions } from "@/lib/toast-actions";
 import { Label } from "@/components/ui/label";
@@ -53,17 +53,55 @@ interface DynamicDestinationFormProps {
   cancelHref: string;
 }
 
-export function DynamicDestinationForm({
-  categories,
+function DynamicDestinationFormComponent({
+  categories: categoriesProp,
   initialData,
   onSubmit,
   submitText = "Create Destination",
   cancelHref,
 }: DynamicDestinationFormProps) {
   const { handleError, handleAsyncAction } = useToastActions();
+
+  // Stabilize categories array reference using useMemo
+  // Create a stable key from category IDs to detect actual changes
+  const categoriesKey = useMemo(
+    () => categoriesProp.map((c) => c.id).join(","),
+    [categoriesProp]
+  );
+
+  const stableCategories = useMemo(
+    () => categoriesProp,
+    [categoriesKey]
+  );
+
   const [selectedCategory, setSelectedCategory] = useState(
     initialData?.categoryId || ""
   );
+  const [selectedSubcategory, setSelectedSubcategory] = useState(
+    initialData?.subcategoryId || ""
+  );
+  const [availableSubcategories, setAvailableSubcategories] = useState<
+    { id: string; name: string }[]
+  >([]);
+
+  // Update available subcategories when category changes
+  // Only update state if the array actually changed to avoid render churn
+  useEffect(() => {
+    const nextSubcategories = selectedCategory
+      ? (stableCategories.find((c) => c.id === selectedCategory)?.subcategories || [])
+      : [];
+
+    const sameLength = availableSubcategories.length === nextSubcategories.length;
+    const sameIds =
+      sameLength &&
+      availableSubcategories.every((s, i) => s.id === nextSubcategories[i]?.id);
+
+    if (!sameIds) {
+      setAvailableSubcategories(nextSubcategories);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCategory]); // Intentionally exclude stableCategories to keep effect minimal
+
   const [formData, setFormData] = useState<Record<string, unknown>>({
     name: initialData?.name || "",
     description: initialData?.description || "",
@@ -78,16 +116,79 @@ export function DynamicDestinationForm({
     ...initialData,
   });
 
-  const selectedCategoryData = categories.find(
-    (cat) => cat.id === selectedCategory
-  );
+  // Find selected category data
+  const selectedCategoryData = stableCategories.find((cat) => cat.id === selectedCategory);
 
-  const handleFieldChange = (name: string, value: unknown) => {
+  const handleFieldChange = useCallback((name: string, value: unknown) => {
     setFormData((prev) => ({
       ...prev,
       [name]: value,
     }));
-  };
+  }, []);
+
+  // Memoize handlers to keep them stable
+  const handleCategoryChange = useCallback((value: string) => {
+    setSelectedCategory((prev) => {
+      if (prev === value) return prev;
+      return value;
+    });
+    // Reset subcategory immediately on category change to keep controlled value valid
+    setSelectedSubcategory("");
+  }, []);
+
+  const handleSubcategoryChange = useCallback((value: string) => {
+    setSelectedSubcategory((prev) => {
+      if (prev === value) return prev;
+      return value;
+    });
+  }, []);
+
+  // Memoize category items to prevent re-creation
+  const categoryItems = useMemo(
+    () =>
+      stableCategories.map((category) => (
+        <SelectItem key={category.id} value={category.id}>
+          {category.name}
+        </SelectItem>
+      )),
+    [stableCategories]
+  );
+
+  // Memoize subcategory items to prevent re-creation
+  const subcategoryItems = useMemo(() => {
+    if (!selectedCategory || availableSubcategories.length === 0) {
+      return [
+        <SelectItem key="no-options" value="no-options" disabled>
+          {selectedCategory ? "No subcategories available" : "Select a category first"}
+        </SelectItem>
+      ];
+    }
+    return availableSubcategories.map((subcategory) => (
+      <SelectItem key={subcategory.id} value={subcategory.id}>
+        {subcategory.name}
+      </SelectItem>
+    ));
+  }, [selectedCategory, availableSubcategories]);
+
+  // Memoize the values object to prevent unnecessary re-renders
+  // Use a ref to track if formData actually changed
+  const lastFormDataRef = useRef(formData);
+  const formValues = useMemo(() => {
+    // Only recalculate if formData reference changed
+    if (lastFormDataRef.current === formData) {
+      return lastFormDataRef.current as Record<string, string>;
+    }
+    lastFormDataRef.current = formData;
+    return Object.fromEntries(
+      Object.entries(formData).map(([key, value]) => [
+        key,
+        String(value || ""),
+      ])
+    );
+  }, [formData]);
+
+  // Don't memoize the JSX - create it inline to avoid React reconciliation issues
+  // The key props will ensure React handles updates correctly
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,11 +196,17 @@ export function DynamicDestinationForm({
     try {
       const formDataObj = new FormData();
 
-      // Add all form data
-      Object.entries(formData).forEach(([key, value]) => {
+      // Add all form data, including current Select values
+      const finalFormData = {
+        ...formData,
+        categoryId: selectedCategory,
+        subcategoryId: selectedSubcategory,
+      };
+
+      Object.entries(finalFormData).forEach(([key, value]) => {
         if (value !== null && value !== undefined && value !== "") {
-          if (value instanceof File) {
-            formDataObj.append(key, value);
+          if (typeof value === "object" && (value as object) instanceof File) {
+            formDataObj.append(key, value as File);
           } else {
             formDataObj.append(key, String(value));
           }
@@ -128,23 +235,14 @@ export function DynamicDestinationForm({
         <div>
           <Label htmlFor="categoryId">Category *</Label>
           <Select
-            value={selectedCategory}
-            onValueChange={(value) => {
-              setSelectedCategory(value);
-              handleFieldChange("categoryId", value);
-              handleFieldChange("subcategoryId", ""); // Reset subcategory
-            }}
-            required
+            value={selectedCategory || ""}
+            onValueChange={handleCategoryChange}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select a category" />
             </SelectTrigger>
             <SelectContent>
-              {categories.map((category) => (
-                <SelectItem key={category.id} value={category.id}>
-                  {category.name}
-                </SelectItem>
-              ))}
+              {categoryItems}
             </SelectContent>
           </Select>
         </div>
@@ -152,20 +250,16 @@ export function DynamicDestinationForm({
         <div>
           <Label htmlFor="subcategoryId">Subcategory *</Label>
           <Select
-            value={String(formData.subcategoryId || "")}
-            onValueChange={(value) => handleFieldChange("subcategoryId", value)}
-            required
+            value={selectedSubcategory || ""}
+            onValueChange={handleSubcategoryChange}
             disabled={!selectedCategory}
+            key={selectedCategory || "no-category"}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Select a subcategory" />
+              <SelectValue placeholder={selectedCategory ? "Select a subcategory" : "Select a category first"} />
             </SelectTrigger>
             <SelectContent>
-              {selectedCategoryData?.subcategories.map((subcategory) => (
-                <SelectItem key={subcategory.id} value={subcategory.id}>
-                  {subcategory.name}
-                </SelectItem>
-              ))}
+              {subcategoryItems}
             </SelectContent>
           </Select>
         </div>
@@ -180,12 +274,7 @@ export function DynamicDestinationForm({
             </h3>
             <DynamicForm
               fields={selectedCategoryData.formFields}
-              values={Object.fromEntries(
-                Object.entries(formData).map(([key, value]) => [
-                  key,
-                  String(value || ""),
-                ])
-              )}
+              values={formValues}
               onChange={handleFieldChange}
             />
           </div>
@@ -217,3 +306,6 @@ export function DynamicDestinationForm({
     </form>
   );
 }
+
+// Memoize the component to prevent unnecessary re-renders
+export const DynamicDestinationForm = memo(DynamicDestinationFormComponent);

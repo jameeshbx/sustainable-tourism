@@ -1,9 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Menu, X, ChevronDown, ChevronRight } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
+import { CategoryType } from "@prisma/client";
+
+interface Category {
+  id: string;
+  name: string;
+  type: CategoryType;
+  subcategories: Array<{
+    id: string;
+    name: string;
+  }>;
+}
 
 export function LandingNavbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -13,34 +25,63 @@ export function LandingNavbar() {
   const [openMobileDropdowns, setOpenMobileDropdowns] = useState<{
     [key: string]: boolean;
   }>({});
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch("/api/categories");
+        if (response.ok) {
+          const data = await response.json();
+          setCategories(data);
+        }
+      } catch (error) {
+        console.error("Error fetching categories:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
+  // Build navigation items dynamically from categories
+  const activityCategories = categories.filter(
+    (cat) => cat.type === "ACTIVITY"
+  );
+  const destinationCategories = categories.filter(
+    (cat) => cat.type === "DESTINATION"
+  );
+  const buyLocalCategories = categories.filter(
+    (cat) => cat.type === "BUYLOCAL"
+  );
 
   const navigationItems = [
     { label: "HOME", href: "#home" },
     {
-      label: "ACTIVITIES",
+      label: "ADVENTURE",
       href: "/activities",
-      items: [
-        { label: "Hiking", href: "/hiking" },
-        { label: "Trekking", href: "/trekking" },
-        { label: "Mountain Biking", href: "/mountain-biking" },
-        { label: "Cycling", href: "/cycling" },
-        { label: "Kayaking", href: "/kayaking" },
-        { label: "Rafting", href: "/rafting" },
-        { label: "Surfing", href: "/surfing" },
-        { label: "Snorkeling", href: "/snorkeling" },
-        { label: "Diving", href: "/diving" },
-        { label: "Fishing", href: "/fishing" },
-      ],
+      items: activityCategories.map((cat) => ({
+        label: cat.name,
+        href: `/destinations?category=${cat.id}`,
+      })),
     },
     {
-      label: "ITINERARIES",
-      href: "/itineraries",
-      items: [
-        { label: "Adventure", href: "/adventure" },
-        { label: "Cultural", href: "/cultural" },
-        { label: "Nature", href: "/nature" },
-        { label: "Relaxation", href: "/relaxation" },
-      ],
+      label: "DESTINATION",
+      href: "/destinations",
+      items: destinationCategories.map((cat) => ({
+        label: cat.name,
+        href: `/destinations?category=${cat.id}`,
+      })),
+    },
+    {
+      label: "BUY LOCAL",
+      href: "/buy-local",
+      items: buyLocalCategories.map((cat) => ({
+        label: cat.name,
+        href: `/destinations?category=${cat.id}`,
+      })),
     },
     { label: "BLOGS", href: "/blogs" },
     { label: "CONTACT", href: "#contact" },
@@ -89,27 +130,27 @@ export function LandingNavbar() {
                       />
                     </button>
 
-                    {openDropdowns[item.label] && (
+                    {openDropdowns[item.label] && item.items && item.items.length > 0 && (
                       <div className="absolute top-full left-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 py-2 z-50">
                         {item.items.map((subItem) => (
-                          <a
+                          <Link
                             key={subItem.label}
                             href={subItem.href}
                             className="block px-4 py-2 text-sm text-gray-700 text-bold hover:text-orange-500 hover:bg-gray-50 transition-colors duration-200"
                           >
                             {subItem.label}
-                          </a>
+                          </Link>
                         ))}
                       </div>
                     )}
                   </div>
                 ) : (
-                  <a
+                  <Link
                     href={item.href}
                     className="text-gray-700 text-bold hover:text-orange-500 font-medium transition-colors duration-200"
                   >
                     {item.label}
-                  </a>
+                  </Link>
                 )}
               </div>
             ))}
@@ -150,29 +191,29 @@ export function LandingNavbar() {
                         />
                       </button>
 
-                      {openMobileDropdowns[item.label] && (
+                      {openMobileDropdowns[item.label] && item.items && item.items.length > 0 && (
                         <div className="pl-6 space-y-1">
                           {item.items.map((subItem) => (
-                            <a
+                            <Link
                               key={subItem.label}
                               href={subItem.href}
                               className="block px-3 py-2 text-sm text-gray-600 hover:text-orange-500 font-medium"
                               onClick={() => setIsMenuOpen(false)}
                             >
                               {subItem.label}
-                            </a>
+                            </Link>
                           ))}
                         </div>
                       )}
                     </div>
                   ) : (
-                    <a
+                    <Link
                       href={item.href}
                       className="block px-3 py-2 text-gray-700 hover:text-orange-500 font-medium"
                       onClick={() => setIsMenuOpen(false)}
                     >
                       {item.label}
-                    </a>
+                    </Link>
                   )}
                 </div>
               ))}

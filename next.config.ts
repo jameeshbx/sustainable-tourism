@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'static.vecteezy.com',
+        hostname: 'plus.unsplash.com',
         port: '',
         pathname: '/**',
       },

@@ -139,6 +139,21 @@ export default async function AdminDashboard() {
 
             <Card>
               <CardHeader>
+                <CardTitle>Landing Page</CardTitle>
+                <CardDescription>Configure landing page sections</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-gray-600 mb-4">
+                  Manage hero section, cards, and other landing page content.
+                </p>
+                <Link href="/admin/landing-page">
+                  <Button>Configure Landing Page</Button>
+                </Link>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
                 <CardTitle>Platform Settings</CardTitle>
                 <CardDescription>Configure platform settings</CardDescription>
               </CardHeader>

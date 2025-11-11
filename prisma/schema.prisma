@@ -264,3 +264,81 @@ model ServiceProviderCategory {
   @@index([serviceProviderId])
   @@index([categoryId])
 }
+
+model LandingPageConfig {
+  id                String   @id @default(cuid())
+  section           String   @unique // 'hero', 'experiences', 'eco-trips', etc.
+  heroBackgroundImage String?
+  heroHeadline      String?
+  heroSubtext       String?
+  heroCtaText       String?
+  heroCtaLink       String?
+  // Experiences Section
+  experiencesTitle  String?
+  experiencesSubtitle String?
+  experiencesDescription String? @db.Text
+  experiencesVideoUrl String?
+  experiencesVideoThumbnail String?
+  experiencesVideoTitle String?
+  experiencesCtaText String?
+  experiencesCtaLink String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  heroCards HeroCard[]
+  experienceActivities ExperienceActivity[]
+  experienceCards ExperienceCard[]
+
+  @@index([section])
+}
+
+model HeroCard {
+  id          String   @id @default(cuid())
+  configId    String
+  image       String
+  title       String
+  subtitle    String?
+  navigationLink String?
+  enabled     Boolean  @default(true)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  config LandingPageConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+
+  @@index([configId])
+  @@index([enabled])
+}
+
+model ExperienceActivity {
+  id          String   @id @default(cuid())
+  configId    String
+  name        String
+  enabled     Boolean  @default(true)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  config LandingPageConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+
+  @@index([configId])
+  @@index([enabled])
+}
+
+model ExperienceCard {
+  id          String   @id @default(cuid())
+  configId    String
+  title       String
+  image       String
+  isNew       Boolean  @default(false)
+  tourCount   String?  // e.g., "3 Tours"
+  enabled     Boolean  @default(true)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  config LandingPageConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+
+  @@index([configId])
+  @@index([enabled])
+}

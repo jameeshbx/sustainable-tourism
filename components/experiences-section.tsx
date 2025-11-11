@@ -2,8 +2,9 @@
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Play, CheckCircle2 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { CheckCircle2 } from "lucide-react";
+import { useMemo, useState, useEffect } from "react";
+import { CustomVideoPlayer } from "@/components/custom-video-player";
 
 // Stable defaults to avoid re-creating arrays across renders
 const DEFAULT_ACTIVITIES: Activity[] = [
@@ -82,17 +83,60 @@ export function ExperiencesSection({
   activities = DEFAULT_ACTIVITIES,
   activityCards = DEFAULT_ACTIVITY_CARDS,
 }: ExperiencesSectionProps) {
-  const videoIds = VIDEO_IDS; // stable
-  const videoId = videoIds[0]; // deterministic selection
+  const [config, setConfig] = useState<{
+    experiencesTitle?: string;
+    experiencesSubtitle?: string;
+    experiencesDescription?: string;
+    experiencesVideoUrl?: string;
+    experiencesVideoThumbnail?: string;
+    experiencesVideoTitle?: string;
+    experiencesCtaText?: string;
+    experiencesCtaLink?: string;
+    experienceActivities?: Array<{ id: string; name: string }>;
+    experienceCards?: Array<{
+      id: string;
+      title: string;
+      image: string;
+      isNew?: boolean;
+      tourCount?: string;
+    }>;
+  } | null>(null);
 
-  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const response = await fetch("/api/landing-page?section=experiences");
+        if (response.ok) {
+          const data = await response.json();
+          setConfig(data);
+        }
+      } catch (error) {
+        console.error("Error fetching experiences config:", error);
+      }
+    };
+
+    fetchConfig();
+  }, []);
+
+  // Use config data if available, otherwise use props
+  const finalTitle = config?.experiencesTitle || title;
+  const finalSubtitle = config?.experiencesSubtitle || subtitle;
+  const finalDescription = config?.experiencesDescription || description;
+  const finalVideoUrl = config?.experiencesVideoUrl;
+  const finalVideoThumbnail = config?.experiencesVideoThumbnail || videoThumbnail;
+  const finalVideoTitle = config?.experiencesVideoTitle || videoTitle;
+  const finalCtaText = config?.experiencesCtaText || "Explore More";
+  const finalCtaLink = config?.experiencesCtaLink || "#";
+  const finalActivities = config?.experienceActivities || activities;
+  const finalActivityCards = config?.experienceCards || activityCards;
+
   const leftActivities = useMemo(
-    () => activities.filter((_, i) => i % 2 === 0),
-    [activities]
+    () => finalActivities.filter((_, i) => i % 2 === 0),
+    [finalActivities]
   );
   const rightActivities = useMemo(
-    () => activities.filter((_, i) => i % 2 === 1),
-    [activities]
+    () => finalActivities.filter((_, i) => i % 2 === 1),
+    [finalActivities]
   );
 
   return (
@@ -103,15 +147,18 @@ export function ExperiencesSection({
           <div className="space-y-6">
             <div>
               <p className="text-[#F7921E] font-pecita tracking-wide text-[28px] leading-none">
-                Explore Activities
+                {finalTitle}
               </p>
               <h2 className="mt-3 text-black text-4xl sm:text-5xl font-extrabold leading-tight">
-                Experiences the
-                <br />
-                <span className="">Green Way</span>
+                {finalSubtitle.split("\n").map((line, i) => (
+                  <span key={i}>
+                    {line}
+                    {i < finalSubtitle.split("\n").length - 1 && <br />}
+                  </span>
+                ))}
               </h2>
             </div>
-            <p className="text-gray-300 max-w-xl">{description}</p>
+            <p className="text-gray-300 max-w-xl">{finalDescription}</p>
 
             <div className="relative">
               {/* fuzzy shadow cluster */}
@@ -164,47 +211,31 @@ export function ExperiencesSection({
           {/* Right video spotlight */}
           <div className="relative">
             <div className="relative overflow-hidden h-[480px] bg-transparent rounded-t-[160px]">
-              {!isVideoPlaying ? (
-                // Show thumbnail with custom play button
+              {finalVideoUrl ? (
+                <CustomVideoPlayer
+                  videoUrl={finalVideoUrl}
+                  thumbnail={finalVideoThumbnail}
+                  title={finalVideoTitle}
+                  className="w-full h-full rounded-t-[160px]"
+                />
+              ) : (
                 <div className="relative w-full h-full">
                   <img
-                    src={videoThumbnail}
+                    src={finalVideoThumbnail}
                     alt="Video thumbnail"
                     className="w-full h-full object-cover"
                   />
                   <div className="absolute inset-0 bg-black/20" />
-
-                  {/* Custom play button overlay */}
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <Button
-                      onClick={() => setIsVideoPlaying(true)}
-                      className="rounded-full p-0 h-20 w-20 bg-[#FFD21E] hover:bg-[#FFCA0A] text-black flex items-center justify-center shadow-2xl hover:scale-110 transition-all duration-300"
-                    >
-                      <Play className="h-10 w-10 ml-1" />
-                    </Button>
-                  </div>
-
-                  {/* Bottom text overlay */}
-                  <div className="absolute bottom-8 left-10 flex items-center gap-3">
-                    <div>
-                      <p className="text-[#FFC043] italic">New</p>
-                      <p className="font-semibold text-white">
-                        Watch Our Video
-                      </p>
+                  {finalVideoTitle && (
+                    <div className="absolute bottom-8 left-10 flex items-center gap-3">
+                      <div>
+                        <p className="text-[#FFC043] italic">New</p>
+                        <p className="font-semibold text-white">
+                          {finalVideoTitle}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                </div>
-              ) : (
-                // Show actual YouTube video when playing
-                <div className="absolute inset-0 overflow-hidden">
-                  <iframe
-                    className="w-full h-full"
-                    src={`https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1&controls=1&autoplay=1`}
-                    title="Experience Video"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                    referrerPolicy="strict-origin-when-cross-origin"
-                    allowFullScreen
-                  />
+                  )}
                 </div>
               )}
             </div>
@@ -212,43 +243,64 @@ export function ExperiencesSection({
         </div>
 
         {/* Cards */}
-        <div className="mt-14">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {activityCards.map((card) => (
-              <Card
-                key={card.id}
-                className="overflow-hidden bg-transparent border-0 shadow-none"
-              >
-                <div className="group relative aspect-[3/4] rounded-xl overflow-hidden">
-                  <img
-                    src={card.image}
-                    alt={card.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                  <div className="absolute top-3 right-3 text-[10px] font-semibold uppercase tracking-wide">
-                    <span className="bg-[#FF8C2E] text-white px-2 py-1 rounded-md">
-                      3 Tours
-                    </span>
+        {finalActivityCards.length > 0 && (
+          <div className="mt-14">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {finalActivityCards.map((card) => (
+                <Card
+                  key={card.id}
+                  className="overflow-hidden bg-transparent border-0 shadow-none"
+                >
+                  <div className="group relative aspect-[3/4] rounded-xl overflow-hidden">
+                    <img
+                      src={card.image}
+                      alt={card.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                    {card.tourCount && (
+                      <div className="absolute top-3 right-3 text-[10px] font-semibold uppercase tracking-wide">
+                        <span className="bg-[#FF8C2E] text-white px-2 py-1 rounded-md">
+                          {card.tourCount}
+                        </span>
+                      </div>
+                    )}
+                    {card.isNew && (
+                      <div className="absolute top-3 left-3 text-[10px] font-semibold uppercase tracking-wide">
+                        <span className="bg-[#FF8C2E] text-white px-2 py-1 rounded-md">
+                          NEW
+                        </span>
+                      </div>
+                    )}
+                    <div className="absolute bottom-4 left-4 text-left">
+                      <p className="text-white/80 text-sm">Experience</p>
+                      <h3 className="text-lg font-semibold">{card.title}</h3>
+                    </div>
                   </div>
-                  <div className="absolute bottom-4 left-4 text-left">
-                    <p className="text-white/80 text-sm">Experience</p>
-                    <h3 className="text-lg font-semibold">{card.title}</h3>
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
+                </Card>
+              ))}
+            </div>
 
-          <div className="mt-10 flex justify-center">
-            <Button
-              variant="secondary"
-              className="bg-black text-white text-lg py-5 px-8 md:py-6 md:px-10 hover:bg-black/80"
-            >
-              Explore More
-            </Button>
+            {finalCtaText && (
+              <div className="mt-10 flex justify-center">
+                <Button
+                  variant="secondary"
+                  className="bg-black text-white text-lg py-5 px-8 md:py-6 md:px-10 hover:bg-black/80"
+                  onClick={() => {
+                    if (finalCtaLink.startsWith("#")) {
+                      const element = document.querySelector(finalCtaLink);
+                      element?.scrollIntoView({ behavior: "smooth" });
+                    } else {
+                      window.location.href = finalCtaLink;
+                    }
+                  }}
+                >
+                  {finalCtaText}
+                </Button>
+              </div>
+            )}
           </div>
-        </div>
+        )}
       </div>
     </section>
   );

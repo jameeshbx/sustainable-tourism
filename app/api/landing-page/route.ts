@@ -92,7 +92,21 @@ export async function POST(request: NextRequest) {
     } = body;
 
     // Build update object - only include fields that are explicitly provided
-    const updateData: any = {};
+    const updateData: {
+      heroBackgroundImage?: string | null;
+      heroHeadline?: string | null;
+      heroSubtext?: string | null;
+      heroCtaText?: string | null;
+      heroCtaLink?: string | null;
+      experiencesTitle?: string | null;
+      experiencesSubtitle?: string | null;
+      experiencesDescription?: string | null;
+      experiencesVideoUrl?: string | null;
+      experiencesVideoThumbnail?: string | null;
+      experiencesVideoTitle?: string | null;
+      experiencesCtaText?: string | null;
+      experiencesCtaLink?: string | null;
+    } = {};
     
     // Hero section fields - only update if provided
     if (heroBackgroundImage !== undefined) updateData.heroBackgroundImage = heroBackgroundImage;
@@ -112,7 +126,22 @@ export async function POST(request: NextRequest) {
     if (experiencesCtaLink !== undefined) updateData.experiencesCtaLink = experiencesCtaLink;
 
     // Build create object with defaults
-    const createData: any = {
+    const createData: {
+      section: string;
+      heroBackgroundImage: string | null;
+      heroHeadline: string | null;
+      heroSubtext: string | null;
+      heroCtaText: string | null;
+      heroCtaLink: string | null;
+      experiencesTitle: string | null;
+      experiencesSubtitle: string | null;
+      experiencesDescription: string | null;
+      experiencesVideoUrl: string | null;
+      experiencesVideoThumbnail: string | null;
+      experiencesVideoTitle: string | null;
+      experiencesCtaText: string | null;
+      experiencesCtaLink: string | null;
+    } = {
       section,
       heroBackgroundImage: heroBackgroundImage || null,
       heroHeadline: heroHeadline || null,
@@ -143,7 +172,14 @@ export async function POST(request: NextRequest) {
       });
       if (heroCards.length > 0) {
         await prisma.heroCard.createMany({
-          data: heroCards.map((card: any, index: number) => ({
+          data: heroCards.map((card: {
+            image?: string;
+            title?: string;
+            subtitle?: string | null;
+            navigationLink?: string | null;
+            enabled?: boolean;
+            order?: number;
+          }, index: number) => ({
             configId: config.id,
             image: card.image || "",
             title: card.title || "",
@@ -163,7 +199,11 @@ export async function POST(request: NextRequest) {
       });
       if (experienceActivities.length > 0) {
         await prisma.experienceActivity.createMany({
-          data: experienceActivities.map((activity: any, index: number) => ({
+          data: experienceActivities.map((activity: {
+            name?: string;
+            enabled?: boolean;
+            order?: number;
+          }, index: number) => ({
             configId: config.id,
             name: activity.name || "",
             enabled: activity.enabled !== undefined ? activity.enabled : true,
@@ -180,7 +220,14 @@ export async function POST(request: NextRequest) {
       });
       if (experienceCards.length > 0) {
         await prisma.experienceCard.createMany({
-          data: experienceCards.map((card: any, index: number) => ({
+          data: experienceCards.map((card: {
+            title?: string;
+            image?: string;
+            isNew?: boolean;
+            tourCount?: string | null;
+            enabled?: boolean;
+            order?: number;
+          }, index: number) => ({
             configId: config.id,
             title: card.title || "",
             image: card.image || "",

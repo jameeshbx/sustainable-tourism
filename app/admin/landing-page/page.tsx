@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -121,7 +122,7 @@ export default function LandingPageConfigPage() {
           heroCtaLink: heroData.heroCtaLink || "",
         });
         setHeroCards(
-          heroData.heroCards?.map((card: any) => ({
+          heroData.heroCards?.map((card: HeroCard) => ({
             ...card,
             enabled: card.enabled !== undefined ? card.enabled : true,
           })) || []
@@ -143,13 +144,13 @@ export default function LandingPageConfigPage() {
           experiencesCtaLink: expData.experiencesCtaLink || "",
         });
         setExperienceActivities(
-          expData.experienceActivities?.map((act: any) => ({
+          expData.experienceActivities?.map((act: ExperienceActivity) => ({
             ...act,
             enabled: act.enabled !== undefined ? act.enabled : true,
           })) || []
         );
         setExperienceCards(
-          expData.experienceCards?.map((card: any) => ({
+          expData.experienceCards?.map((card: ExperienceCard) => ({
             ...card,
             enabled: card.enabled !== undefined ? card.enabled : true,
             isNew: card.isNew !== undefined ? card.isNew : false,
@@ -520,7 +521,7 @@ export default function LandingPageConfigPage() {
                   </div>
               {heroCards.length === 0 ? (
                 <p className="text-gray-500 text-center py-8">
-                  No cards added yet. Click "Add Card" to create one.
+                  No cards added yet. Click &quot;Add Card&quot; to create one.
                 </p>
               ) : (
                 <Table>
@@ -553,9 +554,11 @@ export default function LandingPageConfigPage() {
                           </TableCell>
                           <TableCell>
                             {card.image ? (
-                              <img
+                              <Image
                                 src={card.image}
-                                alt={card.title}
+                                alt={card.title || "Card image"}
+                                width={64}
+                                height={64}
                                 className="w-16 h-16 object-cover rounded"
                               />
                             ) : (
@@ -1156,9 +1159,11 @@ export default function LandingPageConfigPage() {
                         <TableRow key={card.id || index}>
                           <TableCell>
                             {card.image ? (
-                              <img
+                              <Image
                                 src={card.image}
-                                alt={card.title}
+                                alt={card.title || "Card image"}
+                                width={64}
+                                height={64}
                                 className="w-16 h-16 object-cover rounded"
                               />
                             ) : (

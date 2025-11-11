@@ -62,6 +62,7 @@ interface ActivityCard {
   title: string;
   image: string;
   isNew?: boolean;
+  tourCount?: string;
 }
 
 interface ExperiencesSectionProps {
